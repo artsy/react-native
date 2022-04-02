@@ -1,7 +1,6 @@
 import styled from '@emotion/native';
-import { addons } from '@storybook/addons';
-import { StoryStore } from '@storybook/client-api';
-import React, { useState, useEffect, useRef, useReducer } from 'react';
+import { StoryIndex, StoryStore } from '@storybook/client-api';
+import React, { useState, useRef } from 'react';
 import {
   Animated,
   Dimensions,
@@ -14,7 +13,6 @@ import {
   StatusBar,
   StyleSheet,
 } from 'react-native';
-import Events from '@storybook/core-events';
 import StoryListView from '../StoryListView';
 import StoryView from '../StoryView';
 import AbsolutePositionedKeyboardAwareView, {
@@ -41,7 +39,8 @@ export const IS_EXPO = getExpoRoot() !== undefined;
 const IS_ANDROID = Platform.OS === 'android';
 const BREAKPOINT = 1024;
 interface OnDeviceUIProps {
-  storyStore: StoryStore;
+  story: any;
+  storyIndex: StoryIndex;
   url?: string;
   tabOpen?: number;
   isUIHidden?: boolean;
@@ -71,30 +70,31 @@ const styles = StyleSheet.create({
   expoAndroidContainer: { paddingTop: StatusBar.currentHeight },
 });
 
-const useSelectedStory = (storyStore: StoryStore) => {
-  const [storyId, setStoryId] = useState(storyStore.getSelection()?.storyId || '');
-  const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const channel = useRef(addons.getChannel());
+// const useSelectedStory = (storyStore: StoryStore) => {
+//   const [storyId, setStoryId] = useState(storyStore.getSelection()?.storyId || '');
+//   const [, forceUpdate] = useReducer((x) => x + 1, 0);
+//   const channel = useRef(addons.getChannel());
 
-  useEffect(() => {
-    const handleStoryWasSet = ({ id: newStoryId }: { id: string }) => setStoryId(newStoryId);
+//   useEffect(() => {
+//     const handleStoryWasSet = ({ id: newStoryId }: { id: string }) => setStoryId(newStoryId);
 
-    const currentChannel = channel.current;
-    channel.current.on(Events.SELECT_STORY, handleStoryWasSet);
-    //TODO: update preview without force
-    channel.current.on(Events.FORCE_RE_RENDER, forceUpdate);
+//     const currentChannel = channel.current;
+//     channel.current.on(Events.SELECT_STORY, handleStoryWasSet);
+//     //TODO: update preview without force
+//     channel.current.on(Events.FORCE_RE_RENDER, forceUpdate);
 
-    return () => {
-      currentChannel.removeListener(Events.SELECT_STORY, handleStoryWasSet);
-      currentChannel.removeListener(Events.FORCE_RE_RENDER, forceUpdate);
-    };
-  }, []);
+//     return () => {
+//       currentChannel.removeListener(Events.SELECT_STORY, handleStoryWasSet);
+//       currentChannel.removeListener(Events.FORCE_RE_RENDER, forceUpdate);
+//     };
+//   }, []);
 
-  return storyStore.fromId(storyId);
-};
+//   return storyStore.fromId(storyId);
+// };
 
 const OnDeviceUI = ({
-  storyStore,
+  story,
+  storyIndex,
   isUIHidden,
   shouldDisableKeyboardAvoidingView,
   keyboardAvoidingViewVerticalOffset,
@@ -106,7 +106,7 @@ const OnDeviceUI = ({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   });
-  const story = useSelectedStory(storyStore);
+  // const story = useSelectedStory(storyStore);
   const animatedValue = useRef(new Animated.Value(tabOpen));
   const wide = useWindowDimensions().width >= BREAKPOINT;
 
@@ -164,7 +164,7 @@ const OnDeviceUI = ({
           <Panel
             style={getNavigatorPanelPosition(animatedValue.current, previewDimensions.width, wide)}
           >
-            <StoryListView storyStore={storyStore} selectedStory={story} />
+            <StoryListView storyIndex={storyIndex} selectedStory={story} />
           </Panel>
           <Panel
             style={getAddonPanelPosition(animatedValue.current, previewDimensions.width, wide)}
