@@ -1,6 +1,6 @@
 import styled from '@emotion/native';
 import { addons, StoryKind } from '@storybook/addons';
-import { StoreItem, StoryIndex } from '@storybook/client-api';
+import { StoreItem, StoryIndex, StoryIndexEntry } from '@storybook/client-api';
 import Events from '@storybook/core-events';
 import React, { useMemo, useState } from 'react';
 import { SectionList, StyleSheet } from 'react-native';
@@ -105,7 +105,7 @@ interface Props {
 
 interface DataItem {
   title: StoryKind;
-  data: StoreItem[];
+  data: StoryIndexEntry[];
 }
 
 const getStories = (storyIndex: StoryIndex): DataItem[] => {
@@ -119,7 +119,7 @@ const getStories = (storyIndex: StoryIndex): DataItem[] => {
       data: (acc[story.title]?.data ?? []).concat(story),
     };
     return acc;
-  }, {});
+  }, {} as Record<string, DataItem>);
 
   return Object.values(groupedStories);
 };
@@ -180,13 +180,13 @@ const StoryListView = ({ selectedStory, storyIndex }: Props) => {
         renderItem={({ item }) => (
           <ListItem
             title={item.name}
-            kind={item.kind}
+            kind={item.title}
             selected={selectedStory && item.id === selectedStory.id}
             onPress={() => changeStory(item.id)}
           />
         )}
         renderSectionHeader={({ section: { title } }) => (
-          <SectionHeader title={title} selected={selectedStory && title === selectedStory.kind} />
+          <SectionHeader title={title} selected={selectedStory && title === selectedStory.title} />
         )}
         keyExtractor={(item, index) => item.id + index}
         sections={data}
