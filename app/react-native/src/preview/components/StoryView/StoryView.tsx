@@ -34,9 +34,10 @@ const StoryView = ({ story }: Props) => {
 
   if (story && story.unboundStoryFn) {
     const { unboundStoryFn } = story;
+    //FIXME: unboa
     return (
       <View key={id} testID={id} style={styles.container}>
-        {context && context.id === story.id ? unboundStoryFn(context) : null}
+        {context && context.id === story.id ? unboundStoryFn(context, context) : null}
       </View>
     );
   }

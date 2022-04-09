@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useReducer } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StoryId, StoryStore, StoryIndex } from '@storybook/store';
+import { StoryId, StoryStore, StoryIndex, Selection } from '@storybook/store';
 import { addons } from '@storybook/addons';
 import Channel from '@storybook/channels';
 import { Loadable } from '@storybook/core-client';
 import Events from '@storybook/core-events';
-import { toId } from '@storybook/csf';
+import { toId, Globals, Args } from '@storybook/csf';
 import { ThemeProvider } from 'emotion-theming';
 import OnDeviceUI from './components/OnDeviceUI';
 import { theme } from './components/Shared/theme';
@@ -90,6 +90,57 @@ export class Preview {
     this._channel.on(Events.RESET_STORY_ARGS, this.onResetArgs.bind(this));
     this._channel.on(Events.FORCE_RE_RENDER, this.onForceReRender.bind(this));
     this._channel.on(Events.FORCE_REMOUNT, this.onForceRemount.bind(this));
+  }
+
+  onSetCurrentStory(selection: Selection) {
+    console.log('onSetCurrentStory', { selection });
+    this._channel.emit(Events.CURRENT_STORY_WAS_SET, selection);
+    this._setStory({ id: selection.storyId });
+  }
+
+  async onUpdateGlobals({ globals }: { globals: Globals }) {
+    this._storyStore.globals.update(globals);
+
+    this._forceRerender();
+
+    this._channel.emit(Events.GLOBALS_UPDATED, {
+      globals: this._storyStore.globals.get(),
+      initialGlobals: this._storyStore.globals.initialGlobals,
+    });
+  }
+
+  async onUpdateArgs({ storyId, updatedArgs }: { storyId: StoryId; updatedArgs: Args }) {
+    this._storyStore.args.update(storyId, updatedArgs);
+
+    this._forceRerender();
+
+    this._channel.emit(Events.STORY_ARGS_UPDATED, {
+      storyId,
+      args: this._storyStore.args.get(storyId),
+    });
+  }
+
+  async onResetArgs({ storyId, argNames }: { storyId: string; argNames?: string[] }) {
+    const { initialArgs } = this._storyStore.fromId(storyId);
+
+    const argNamesToReset = argNames || Object.keys(this._storyStore.args.get(storyId));
+    const updatedArgs = argNamesToReset.reduce((acc, argName) => {
+      acc[argName] = initialArgs[argName];
+      return acc;
+    }, {} as Partial<Args>);
+
+    await this.onUpdateArgs({ storyId, updatedArgs });
+  }
+
+  // ForceReRender does not include a story id, so we simply must
+  // re-render all stories in case they are relevant
+  async onForceReRender() {
+    this._forceRerender();
+  }
+
+  async onForceRemount({ storyId }: { storyId: StoryId }) {
+    console.log('onForceRemount', { storyId });
+    this._forceRerender();
   }
 
   // This happens when a glob gets HMR-ed
