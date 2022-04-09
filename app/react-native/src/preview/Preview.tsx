@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useReducer } from 'react';
+import { Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StoryId, StoryStore, StoryIndex, Selection } from '@storybook/store';
 import { addons } from '@storybook/addons';
@@ -69,7 +70,6 @@ export class Preview {
   constructor() {
     this._channel = addons.getChannel();
     // this._decorators = [];
-    this._storyStore = new StoryStore();
   }
 
   initialize({
@@ -161,7 +161,8 @@ export class Preview {
     // addons.loadAddons(this._clientApi);
 
     const self = this;
-    const storyIndex = self._getStoryIndex();
+    let storyIndex;
+
     const appliedTheme = { ...theme, ...params.theme };
     return () => {
       const [storyId, setStoryId] = useState(this._storyId || '');
@@ -169,10 +170,23 @@ export class Preview {
       useEffect(() => {
         self._setStory = ({ id: newStoryId }: { id: string }) => setStoryId(newStoryId);
         self._forceRerender = () => forceUpdate();
+
+        self._storyStore = new StoryStore();
+        storyIndex = self._getStoryIndex();
+        self._storyStore
+          .initialize({
+            storyIndex,
+            importFn: () => Promise.resolve({}),
+            cache: true,
+          })
+          .then(() => self._channel.emit(Events.FORCE_RE_RENDER));
       }, []);
 
-      const story = self._storyStore.fromId(storyId);
+      if (!storyIndex || !self._storyStore) {
+        return <Text>Loading</Text>;
+      }
 
+      const story = self._storyStore.fromId(storyId);
       return (
         <ThemeProvider theme={appliedTheme}>
           <OnDeviceUI

@@ -65,7 +65,7 @@ global.lastExportsMap = new Map<Path, ModuleExports>();
  * @param m NodeModule
  * @returns { added: Map<Path, ModuleExports>, removed: Map<Path, ModuleExports> }
  */
-export function executeLoadableForChanges(loadable: Loadable) {
+export function executeLoadableForChanges(loadable: Loadable, _m?: NodeModule) {
   // if (m?.hot?.dispose) {
   //   m.hot.accept();
   //   m.hot.dispose((data) => {
