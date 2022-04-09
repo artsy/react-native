@@ -52,8 +52,11 @@ export class Preview {
 
   _getStoryIndex?: () => StoryIndex;
 
+  _storyIndex: StoryIndex;
+
   _storyId: StoryId;
 
+  _setReady: (ready: boolean) => void;
   _setStory: ({ id: newStoryId }: { id: string }) => void;
   _forceRerender: () => void;
 
@@ -67,9 +70,9 @@ export class Preview {
 
   configure: (loadable: Loadable, m: NodeModule) => void;
 
-  constructor() {
-    this._channel = addons.getChannel();
+  constructor({ storyStore }: { storyStore: StoryStore<ReactFramework> }) {
     // this._decorators = [];
+    this._storyStore = storyStore;
   }
 
   initialize({
@@ -79,7 +82,16 @@ export class Preview {
     // getProjectAnnotations has been run, thus this slightly awkward approach
     getStoryIndex?: () => StoryIndex;
   }) {
-    this._getStoryIndex = getStoryIndex;
+    this._channel = addons.getChannel();
+    this._storyIndex = getStoryIndex();
+    this._storyStore
+      .initialize({
+        storyIndex: this._storyIndex,
+        importFn: () => Promise.resolve({}),
+        cache: true,
+      })
+      .then(() => this._setReady(true));
+
     this.setupListeners();
   }
 
@@ -161,28 +173,19 @@ export class Preview {
     // addons.loadAddons(this._clientApi);
 
     const self = this;
-    let storyIndex;
 
     const appliedTheme = { ...theme, ...params.theme };
     return () => {
+      const [ready, setReady] = useState(false);
       const [storyId, setStoryId] = useState(this._storyId || '');
       const [, forceUpdate] = useReducer((x) => x + 1, 0);
       useEffect(() => {
+        self._setReady = setReady;
         self._setStory = ({ id: newStoryId }: { id: string }) => setStoryId(newStoryId);
         self._forceRerender = () => forceUpdate();
-
-        self._storyStore = new StoryStore();
-        storyIndex = self._getStoryIndex();
-        self._storyStore
-          .initialize({
-            storyIndex,
-            importFn: () => Promise.resolve({}),
-            cache: true,
-          })
-          .then(() => self._channel.emit(Events.FORCE_RE_RENDER));
       }, []);
 
-      if (!storyIndex || !self._storyStore) {
+      if (!ready) {
         return <Text>Loading</Text>;
       }
 
@@ -191,7 +194,7 @@ export class Preview {
         <ThemeProvider theme={appliedTheme}>
           <OnDeviceUI
             story={story}
-            storyIndex={storyIndex}
+            storyIndex={self._storyIndex}
             isUIHidden={params.isUIHidden}
             tabOpen={params.tabOpen}
             shouldDisableKeyboardAvoidingView={params.shouldDisableKeyboardAvoidingView}
